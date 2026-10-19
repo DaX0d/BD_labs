@@ -1,0 +1,75 @@
+@startuml
+hide circle
+skinparam linetype ortho
+
+entity "users" as users {
+  * user_id : integer <<PK>>
+  --
+  * last_name : varchar(100)
+  * first_name : varchar(100)
+  middle_name : varchar(100)
+  * birth_date : date
+  * passport_number : varchar(20) <<UNIQUE>>
+  * created_at : timestamptz
+}
+
+entity "user_emails" as user_emails {
+  * email_id : integer <<PK>>
+  --
+  * user_id : integer <<FK>>
+  * email : varchar(255) <<UNIQUE>>
+  * is_primary : boolean
+}
+
+entity "airports" as airports {
+  * airport_id : integer <<PK>>
+  --
+  * iata_code : char(3) <<UNIQUE>>
+  * name : varchar(150)
+  * city : varchar(100)
+  * country : varchar(100)
+}
+
+entity "flights" as flights {
+  * flight_id : integer <<PK>>
+  --
+  * flight_number : varchar(10)
+  * departure_airport_id : integer <<FK>>
+  * arrival_airport_id : integer <<FK>>
+  * departure_time : timestamptz
+  * arrival_time : timestamptz
+  * base_price : numeric(10,2)
+  * total_seats : smallint
+  * status : varchar(20)
+}
+
+entity "tickets" as tickets {
+  * ticket_id : integer <<PK>>
+  --
+  * user_id : integer <<FK>>
+  * flight_id : integer <<FK>>
+  * seat_number : varchar(4)
+  * price : numeric(10,2)
+  * status : varchar(20)
+  * booked_at : timestamptz
+}
+
+users    ||--o{ user_emails : "имеет"
+users    ||--o{ tickets     : "покупает"
+flights  ||--o{ tickets     : "включает"
+airports ||--o{ flights     : "вылет (departure_airport_id)"
+airports ||--o{ flights     : "прилёт (arrival_airport_id)"
+
+note bottom of flights
+  CHECK (departure_airport_id <> arrival_airport_id)
+  CHECK (arrival_time > departure_time)
+  CHECK (base_price > 0), CHECK (total_seats > 0)
+  UNIQUE (flight_number, departure_time)  -- составное
+end note
+
+note bottom of tickets
+  UNIQUE (flight_id, seat_number)  -- составное: одно место на рейсе
+  CHECK (price >= 0)
+  CHECK (status IN ('booked','paid','cancelled'))
+end note
+@enduml
